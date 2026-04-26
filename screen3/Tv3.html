@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Presto - TV3</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@200;300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      font-family: 'Outfit', sans-serif;
+      background: #000; overflow: hidden;
+    }
+    body { display: flex; align-items: center; justify-content: center; }
+
+    .slideshow {
+      width: 1920px; height: 1080px;
+      position: relative; overflow: hidden; background: #050403;
+    }
+    .slideshow::before {
+      content: ""; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      background-size: 256px; pointer-events: none; z-index: 100;
+    }
+
+    /* ═══════ TRANSITIONS ═══════ */
+    .screen {
+      position: absolute; inset: 0; opacity: 0;
+      transform: translateX(100%);
+      transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.22,1,0.36,1);
+      background: #050403; color: white; z-index: 1;
+    }
+    .screen.active { opacity: 1; transform: translateX(0); z-index: 3; }
+    .screen.leaving { opacity: 0; transform: translateX(-40%); z-index: 2; }
+
+    .screen.active .img-strip img { animation: cardEnter 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
+    .screen.active .badge { animation: fadeSlideUp 0.6s ease 0.2s both; }
+    .screen.active .stitle { animation: fadeSlideUp 0.6s ease 0.3s both; }
+    .screen.active .ssub { animation: fadeSlideUp 0.6s ease 0.38s both; }
+    .screen.active .price-row { animation: fadeSlideUp 0.5s ease 0.42s both; }
+    .screen.active .tacos-note { animation: fadeSlideUp 0.5s ease 0.42s both; }
+    .screen.active .item:nth-child(1) { animation: fadeSlideUp 0.35s ease 0.46s both; }
+    .screen.active .item:nth-child(2) { animation: fadeSlideUp 0.35s ease 0.51s both; }
+    .screen.active .item:nth-child(3) { animation: fadeSlideUp 0.35s ease 0.56s both; }
+    .screen.active .item:nth-child(4) { animation: fadeSlideUp 0.35s ease 0.61s both; }
+    .screen.active .item:nth-child(5) { animation: fadeSlideUp 0.35s ease 0.66s both; }
+    .screen.active .item:nth-child(6) { animation: fadeSlideUp 0.35s ease 0.71s both; }
+    .screen.active .item:nth-child(7) { animation: fadeSlideUp 0.35s ease 0.76s both; }
+    .screen.active .item:nth-child(8) { animation: fadeSlideUp 0.35s ease 0.81s both; }
+    .screen.active .item:nth-child(9) { animation: fadeSlideUp 0.35s ease 0.86s both; }
+    .screen.active .item:nth-child(10) { animation: fadeSlideUp 0.35s ease 0.91s both; }
+
+    @keyframes cardEnter {
+      from { opacity: 0; transform: scale(0.92) translateY(16px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseGlow {
+      0%,100% { opacity: 0.3; } 50% { opacity: 0.5; }
+    }
+
+    /* ═══════ DECOR ═══════ */
+    .corner { position: absolute; width: 44px; height: 44px; z-index: 8; opacity: 0.12; }
+    .corner-tl { top: 24px; left: 24px; border-top: 1px solid #ffbe45; border-left: 1px solid #ffbe45; }
+    .corner-tr { top: 24px; right: 24px; border-top: 1px solid #ffbe45; border-right: 1px solid #ffbe45; }
+    .corner-bl { bottom: 24px; left: 24px; border-bottom: 1px solid #ffbe45; border-left: 1px solid #ffbe45; }
+    .corner-br { bottom: 24px; right: 24px; border-bottom: 1px solid #ffbe45; border-right: 1px solid #ffbe45; }
+
+    .brand {
+      position: absolute; left: 50px; top: 34px; z-index: 8;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .brand-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, #ffbe45, #ff8c00);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; color: #050403;
+      box-shadow: 0 4px 20px rgba(255,160,0,0.3);
+    }
+    .brand-text {
+      font-size: 18px; font-weight: 800; letter-spacing: 5px;
+      color: rgba(255,255,255,0.8); text-transform: uppercase;
+    }
+
+    .glow { position: absolute; border-radius: 50%; pointer-events: none; z-index: 1; }
+    .g1 { width: 400px; height: 400px; left: 0%; top: -5%; background: radial-gradient(circle, rgba(255,140,0,0.1) 0%, transparent 70%); animation: pulseGlow 6s ease-in-out infinite; }
+    .g2 { width: 300px; height: 300px; right: 3%; bottom: 3%; background: radial-gradient(circle, rgba(255,160,0,0.07) 0%, transparent 70%); animation: pulseGlow 7s ease-in-out infinite 2s; }
+
+    /* ═══════ LAYOUT 30/70 ═══════ */
+    .layout {
+      position: absolute; inset: 0;
+      display: flex; z-index: 5;
+    }
+    .layout::after {
+      content: ""; position: absolute;
+      left: 520px; top: 60px; bottom: 60px; width: 1px;
+      background: linear-gradient(to bottom, transparent, rgba(255,190,69,0.2) 20%, rgba(255,190,69,0.1) 50%, rgba(255,190,69,0.2) 80%, transparent);
+    }
+
+    .img-strip {
+      width: 520px; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 80px 30px; gap: 14px;
+    }
+    .img-card {
+      width: 100%; max-width: 440px;
+      border-radius: 18px; overflow: hidden; position: relative;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+    }
+    .img-card::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(155deg, rgba(255,255,255,0.06) 0%, transparent 30%);
+      pointer-events: none; border-radius: inherit;
+    }
+    .img-card img { width: 100%; height: 280px; object-fit: cover; display: block; }
+    .img-card.tall img { height: 500px; }
+
+    .menu-zone {
+      flex: 1; height: 100%;
+      display: flex; flex-direction: column;
+      justify-content: center;
+      padding: 50px 60px 50px 50px;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      width: fit-content; padding: 8px 18px; border-radius: 999px;
+      border: 1px solid rgba(255,187,0,0.2); background: rgba(255,170,0,0.05);
+      color: #f0b84d; font-size: 13px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .badge::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: #ffbe45; box-shadow: 0 0 8px rgba(255,190,69,0.5);
+    }
+
+    .stitle {
+      font-family: 'Playfair Display', serif;
+      font-size: 58px; line-height: 1; font-weight: 900;
+      margin: 0 0 8px; text-transform: uppercase;
+    }
+    .stitle .accent {
+      color: #ffbe45;
+      text-shadow: 0 0 30px rgba(255,190,69,0.15);
+    }
+
+    .ssub {
+      font-size: 22px; line-height: 1.4; color: rgba(255,255,255,0.4);
+      font-weight: 300; margin-bottom: 14px;
+    }
+
+    .price-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .price-tier {
+      padding: 6px 14px; border-radius: 10px;
+      background: linear-gradient(100deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.03); text-align: center;
+    }
+    .price-tier-size {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.35);
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;
+    }
+    .price-tier-val {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px; font-weight: 700; color: #ffbe45;
+    }
+
+    .menu-list {
+      display: flex; flex-direction: column; gap: 5px;
+      width: 100%;
+    }
+    .menu-list.two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px 20px;
+    }
+
+    .item {
+      display: flex; align-items: center;
+      padding: 9px 18px; border-radius: 12px;
+      background: linear-gradient(100deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .item-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+    .item-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,190,69,0.5); flex-shrink: 0; }
+    .item-info { min-width: 0; flex: 1; }
+    .item-name { font-size: 30px; font-weight: 600; color: rgba(255,255,255,0.92); }
+    .item-desc { font-size: 22px; color: rgba(255,255,255,0.35); font-weight: 300; margin-top: 1px; }
+    .item-spacer { flex: 1; margin: 0 10px; border-bottom: 1px dotted rgba(255,255,255,0.06); min-width: 10px; }
+    .item-price { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: #ffbe45; white-space: nowrap; }
+
+    /* Tacos config note */
+    .tacos-note {
+      font-size: 22px; color: rgba(255,255,255,0.35); font-weight: 300;
+      margin-bottom: 14px; line-height: 1.5;
+      padding: 10px 16px; border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .tacos-note strong { color: rgba(255,190,69,0.7); font-weight: 600; }
+
+    /* Section divider inside menu */
+    .section-label {
+      font-size: 14px; font-weight: 700; color: rgba(255,190,69,0.6);
+      text-transform: uppercase; letter-spacing: 2px;
+      margin-top: 10px; margin-bottom: 4px;
+      padding-left: 4px;
+    }
+
+    /* ═══════ SCREEN DOTS ═══════ */
+    .screen-dots {
+      position: absolute; bottom: 30px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 10px; z-index: 50;
+    }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer; transition: all 0.4s ease;
+    }
+    .dot.active {
+      background: #ffbe45; border-color: #ffbe45;
+      box-shadow: 0 0 10px rgba(255,190,69,0.5);
+      transform: scale(1.3);
+    }
+
+    /* ═══════ PROMO ANIMATIONS ═══════ */
+    @keyframes promoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes promoPulse {
+      0%, 100% { text-shadow: 0 0 20px rgba(255,100,0,0.3), 0 0 60px rgba(255,60,0,0.15); }
+      50% { text-shadow: 0 0 40px rgba(255,100,0,0.6), 0 0 100px rgba(255,60,0,0.3); }
+    }
+    @keyframes neonFlicker {
+      0%,19%,21%,23%,25%,54%,56%,100% { opacity: 1; }
+      20%,24%,55% { opacity: 0.6; }
+    }
+    @keyframes sparkle {
+      0%,100% { opacity: 0; transform: scale(0) rotate(0deg); }
+      50% { opacity: 1; transform: scale(1) rotate(180deg); }
+    }
+    @keyframes promoEnter {
+      from { opacity: 0; transform: scale(0.8) translateY(40px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes priceEnter {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes lineGrow {
+      from { width: 0; } to { width: 100%; }
+    }
+    @keyframes subtitleEnter {
+      from { opacity: 0; letter-spacing: 15px; }
+      to { opacity: 1; letter-spacing: 4px; }
+    }
+
+    #s7 { display: flex; align-items: center; justify-content: center; }
+    .promo-container {
+      position: relative; z-index: 5;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      width: 100%; height: 100%;
+    }
+    .screen.active .promo-main { animation: promoEnter 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s both; }
+    .screen.active .promo-price-wrap { animation: priceEnter 0.6s cubic-bezier(0.16,1,0.3,1) 0.6s both; }
+    .screen.active .promo-line { animation: lineGrow 0.8s ease 0.4s both; }
+    .screen.active .promo-sub { animation: subtitleEnter 0.8s ease 0.8s both; }
+    .screen.active .promo-detail { animation: fadeSlideUp 0.6s ease 1s both; }
+
+    .promo-main {
+      font-family: 'Playfair Display', serif;
+      font-size: 100px; font-weight: 900; text-transform: uppercase;
+      text-align: center; line-height: 1; color: white;
+      animation: promoPulse 3s ease-in-out infinite;
+    }
+    .promo-main .highlight {
+      color: #ffbe45; font-size: 130px; display: block;
+      animation: promoFloat 4s ease-in-out infinite;
+    }
+    .promo-line {
+      height: 2px; max-width: 500px;
+      background: linear-gradient(90deg, transparent, #ffbe45, transparent);
+      margin: 24px auto;
+    }
+    .promo-price-wrap { display: flex; align-items: baseline; gap: 16px; margin: 16px 0; }
+    .promo-la { font-size: 44px; color: rgba(255,255,255,0.7); font-weight: 300; }
+    .promo-price {
+      font-family: 'Playfair Display', serif;
+      font-size: 160px; font-weight: 900; color: #ffbe45; line-height: 1;
+      animation: neonFlicker 4s ease-in-out infinite, promoFloat 3s ease-in-out infinite 0.5s;
+      text-shadow: 0 0 30px rgba(255,160,0,0.4), 0 0 80px rgba(255,100,0,0.2);
+    }
+    .promo-euro { font-size: 70px; color: #ffbe45; font-weight: 700; font-family: 'Playfair Display', serif; }
+    .promo-sub { font-size: 24px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 4px; font-weight: 300; margin-top: 8px; }
+    .promo-detail { font-size: 16px; color: rgba(255,255,255,0.25); margin-top: 24px; letter-spacing: 2px; text-transform: uppercase; }
+
+    .sparkle {
+      position: absolute; width: 5px; height: 5px;
+      background: #ffbe45; border-radius: 50%;
+      pointer-events: none; z-index: 4;
+    }
+    .sparkle:nth-child(1) { left: 15%; top: 20%; animation: sparkle 3s ease infinite 0s; }
+    .sparkle:nth-child(2) { right: 20%; top: 15%; animation: sparkle 4s ease infinite 0.5s; }
+    .sparkle:nth-child(3) { left: 25%; bottom: 25%; animation: sparkle 3.5s ease infinite 1s; }
+    .sparkle:nth-child(4) { right: 15%; bottom: 20%; animation: sparkle 2.5s ease infinite 1.5s; }
+    .sparkle:nth-child(5) { left: 40%; top: 10%; animation: sparkle 4s ease infinite 2s; width: 4px; height: 4px; }
+    .sparkle:nth-child(6) { right: 35%; bottom: 12%; animation: sparkle 3s ease infinite 0.8s; width: 4px; height: 4px; }
+  </style>
+</head>
+<body>
+  <div class="slideshow">
+
+    <!-- ════════ SCREEN 1 — TACOS & BOWLS ════════ -->
+    <div class="screen active" id="s1">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-strip">
+          <div class="img-card tall"><img src="photo_10.png" alt="Tacos" /></div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Tacos & Bowls</div>
+          <h1 class="stitle">Compose ton <span class="accent">Tacos</span></h1>
+          <div class="ssub">Tous nos Tacos & Bowls sont garnis avec de la sauce fromagère.</div>
+          <div class="tacos-note">
+            <strong>Viandes :</strong> Viande hachée, Kebab, Cordon bleu, Poulet mariné, Nuggets, Tenders, Merguez<br>
+            <strong>Sauces :</strong> Mayonnaise, Harissa, Ketchup, Algérienne, Blanche, BBQ, Tartare, Andalouse, Biggy, Poivre, Curry, Samouraï<br>
+            <strong>Petit plus +1€ :</strong> Gouda, Chèvre, Cheddar, Emmental, Raclette, Boursin, Vache qui Rit, Mozzarella
+          </div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Tacos M</div><div class="item-desc">1 viande</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">8 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Tacos L</div><div class="item-desc">2 viandes</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Tacos XL</div><div class="item-desc">3 viandes + frites + boisson</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">10 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Bowl</div><div class="item-desc">1 viande</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9.50 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 2 — TEX-MEX / SNACKS ════════ -->
+    <div class="screen" id="s2">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-strip">
+          <div class="img-card tall"><img src="photo_11.png" alt="Tex-Mex" /></div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Tex-Mex</div>
+          <h1 class="stitle">Nos <span class="accent">Tex-Mex</span></h1>
+          <div class="ssub">Croustillants, dorés, servis bien chauds.</div>
+          <div class="menu-list two-col">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Onion Rings</div><div class="item-desc">10 pcs</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9.60 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Tenders</div><div class="item-desc">6 pcs</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9.60 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Nuggets</div><div class="item-desc">10 pcs</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9.60 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Chicken Wings</div><div class="item-desc">8 pcs</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9.60 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Calamar Fritti</div><div class="item-desc">10 pcs</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9.60 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Mozza Sticks</div><div class="item-desc">10 pcs</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9.60 €</div>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:16px;">Zapwich</div>
+          <div class="menu-list" style="margin-top:6px;">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Zap'wich au choix + Boisson 33cl</div><div class="item-desc">3 fromages, Jambon, Saumon, Viande hachée, Thon, Poulet, Merguez, Chèvre</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">10 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 3 — ASSIETTES ════════ -->
+    <div class="screen" id="s3">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-strip">
+          <div class="img-card tall"><img src="photo_6.png" alt="Assiette" /></div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Assiettes</div>
+          <h1 class="stitle">Nos <span class="accent">Assiettes</span></h1>
+          <div class="ssub">Servies avec galette de pomme de terre, crudités et fromage.</div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Poulet</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">13 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Kebab</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">13 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Mixte</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">13 €</div>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:20px;">Menu Bambino</div>
+          <div class="menu-list" style="margin-top:6px;">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Menu Bambino</div><div class="item-desc">1 pizza junior classica ou 6 Nuggets + 1 ingrédient au choix + 1 Capri-Sun 33cl</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">8 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 4 — SALADES GOURMANDES ════════ -->
+    <div class="screen" id="s4">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-strip">
+          <div class="img-card tall"><img src="photo_12.png" alt="Salade" /></div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Salades</div>
+          <h1 class="stitle">Salades <span class="accent">Gourmandes</span></h1>
+          <div class="ssub">Fraîches, généreuses, préparées à la commande.</div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Niçoise</div><div class="item-desc">Salade, tomates, thon, olives</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">6 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Pacifique</div><div class="item-desc">Salade, tomates, thon, olives, saumon, citron</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">6 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Chèvre</div><div class="item-desc">Salade, tomates, thon, olives, chèvre chaud sur toast, lardons</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">6 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Campagnarde</div><div class="item-desc">Salade, tomates, thon, olives, poulet, P.de terre</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">6 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Végétarienne</div><div class="item-desc">Salade, tomates, oignons, poivrons, champignons</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">6 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 5 — BOISSONS & GLACES ════════ -->
+    <div class="screen" id="s5">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-strip">
+          <div class="img-card tall"><img src="photo_13.png" alt="Boissons" /></div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Boissons</div>
+          <h1 class="stitle">Nos <span class="accent">Boissons</span></h1>
+          <div class="ssub">Fraîches et variées.</div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Coca-Cola / Coca Light</div><div class="item-desc">33cl</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">1.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Orangina, Fanta, Oasis...</div><div class="item-desc">33cl</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">1.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Cristaline / Perrier...</div><div class="item-desc">50cl / 33cl</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">1.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Maxi Coca-Cola / Fanta</div><div class="item-desc">50cl</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">2.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Oasis</div><div class="item-desc">2L</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:16px;">Glaces</div>
+          <div class="menu-list" style="margin-top:6px;">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Pot de glace</div><div class="item-desc">100ml</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">2.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Pot de glace</div><div class="item-desc">500ml</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">6.50 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 6 — DESSERTS & GRATINES ════════ -->
+    <div class="screen" id="s6">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-strip">
+          <div class="img-card tall"><img src="photo_14.png" alt="Desserts" /></div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Desserts</div>
+          <h1 class="stitle">Nos <span class="accent">Desserts</span></h1>
+          <div class="ssub">Faits maison, pour finir en douceur.</div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Tarte au Daim</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">3 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Fondant au chocolat</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">3 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Brownie au chocolat</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">3 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Tiramisu fait maison</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Café</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">1 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Pistache</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">3 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Nutella</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">3 €</div>
+            </div>
+          </div>
+          <div class="section-label" style="margin-top:16px;">Gratinés</div>
+          <div class="menu-list" style="margin-top:6px;">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Base mozza ou cheddar</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">1 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Chèvre / Lardons / Chorizo</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">1.50 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 7 — ANIMATED PROMO ════════ -->
+    <div class="screen" id="s7">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="sparkle"></div><div class="sparkle"></div><div class="sparkle"></div>
+      <div class="sparkle"></div><div class="sparkle"></div><div class="sparkle"></div>
+
+      <div class="promo-container">
+        <div class="promo-main">2 Pizzas <span class="highlight">Achetées</span></div>
+        <div class="promo-line"></div>
+        <div class="promo-price-wrap">
+          <span class="promo-la">la 3ème à</span>
+          <span class="promo-price">2</span>
+          <span class="promo-euro">€</span>
+        </div>
+        <div class="promo-sub">A emporter &amp; Livraison</div>
+        <div class="promo-detail">Valable tous les jours</div>
+      </div>
+    </div>
+
+    <!-- Navigation dots -->
+    <div class="screen-dots">
+      <div class="dot active" data-screen="0"></div>
+      <div class="dot" data-screen="1"></div>
+      <div class="dot" data-screen="2"></div>
+      <div class="dot" data-screen="3"></div>
+      <div class="dot" data-screen="4"></div>
+      <div class="dot" data-screen="5"></div>
+      <div class="dot" data-screen="6"></div>
+    </div>
+  </div>
+
+  <script>
+    const screens = document.querySelectorAll('.screen');
+    const dots = document.querySelectorAll('.dot');
+    let current = 0;
+    const INTERVAL = 15000;
+
+    function goTo(idx) {
+      const prev = current;
+      const next = idx % screens.length;
+      if (prev === next) return;
+      screens[prev].classList.remove('active');
+      screens[prev].classList.add('leaving');
+      dots[prev].classList.remove('active');
+      screens[next].classList.add('active');
+      dots[next].classList.add('active');
+      setTimeout(() => { screens[prev].classList.remove('leaving'); }, 950);
+      current = next;
+    }
+
+    dots.forEach(d => d.addEventListener('click', () => {
+      clearInterval(timer);
+      goTo(+d.dataset.screen);
+      timer = setInterval(() => goTo(current + 1), INTERVAL);
+    }));
+
+    let timer = setInterval(() => goTo(current + 1), INTERVAL);
+  </script>
+</body>
+</html>

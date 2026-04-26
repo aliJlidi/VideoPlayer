@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Presto - TV1</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@200;300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      font-family: 'Outfit', sans-serif;
+      background: #000; overflow: hidden;
+    }
+    body { display: flex; align-items: center; justify-content: center; }
+
+    .slideshow {
+      width: 1920px; height: 1080px;
+      position: relative; overflow: hidden; background: #050403;
+    }
+    .slideshow::before {
+      content: ""; position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      background-size: 256px; pointer-events: none; z-index: 100;
+    }
+
+    /* ═══════ TRANSITIONS ═══════ */
+    .screen {
+      position: absolute; inset: 0; opacity: 0;
+      transform: translateX(100%);
+      transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.22,1,0.36,1);
+      background: #050403; color: white; z-index: 1;
+    }
+    .screen.active { opacity: 1; transform: translateX(0); z-index: 3; }
+    .screen.leaving { opacity: 0; transform: translateX(-40%); z-index: 2; }
+
+    .screen.active .img-zone img { animation: cardEnter 0.8s cubic-bezier(0.16,1,0.3,1) both; }
+    .screen.active .img-zone .img-main img { animation-delay: 0.15s; }
+    .screen.active .img-zone .img-sub:nth-child(2) img { animation-delay: 0.3s; }
+    .screen.active .img-zone .img-sub:nth-child(3) img { animation-delay: 0.45s; }
+
+    .screen.active .badge { animation: fadeSlideUp 0.6s ease 0.2s both; }
+    .screen.active .stitle { animation: fadeSlideUp 0.6s ease 0.3s both; }
+    .screen.active .ssub { animation: fadeSlideUp 0.6s ease 0.4s both; }
+    .screen.active .item:nth-child(1) { animation: fadeSlideUp 0.4s ease 0.45s both; }
+    .screen.active .item:nth-child(2) { animation: fadeSlideUp 0.4s ease 0.52s both; }
+    .screen.active .item:nth-child(3) { animation: fadeSlideUp 0.4s ease 0.59s both; }
+    .screen.active .item:nth-child(4) { animation: fadeSlideUp 0.4s ease 0.66s both; }
+    .screen.active .item:nth-child(5) { animation: fadeSlideUp 0.4s ease 0.73s both; }
+    .screen.active .item:nth-child(6) { animation: fadeSlideUp 0.4s ease 0.80s both; }
+    .screen.active .item:nth-child(7) { animation: fadeSlideUp 0.4s ease 0.87s both; }
+    .screen.active .item:nth-child(8) { animation: fadeSlideUp 0.4s ease 0.94s both; }
+
+    @keyframes cardEnter {
+      from { opacity: 0; transform: scale(0.9) translateY(20px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(22px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseGlow {
+      0%,100% { opacity: 0.3; } 50% { opacity: 0.5; }
+    }
+
+    /* ═══════ SHARED DECOR ═══════ */
+    .corner { position: absolute; width: 44px; height: 44px; z-index: 8; opacity: 0.12; }
+    .corner-tl { top: 24px; left: 24px; border-top: 1px solid #ffbe45; border-left: 1px solid #ffbe45; }
+    .corner-tr { top: 24px; right: 24px; border-top: 1px solid #ffbe45; border-right: 1px solid #ffbe45; }
+    .corner-bl { bottom: 24px; left: 24px; border-bottom: 1px solid #ffbe45; border-left: 1px solid #ffbe45; }
+    .corner-br { bottom: 24px; right: 24px; border-bottom: 1px solid #ffbe45; border-right: 1px solid #ffbe45; }
+
+    .brand {
+      position: absolute; left: 50px; top: 34px; z-index: 8;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .brand-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, #ffbe45, #ff8c00);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; color: #050403;
+      box-shadow: 0 4px 20px rgba(255,160,0,0.3);
+    }
+    .brand-text {
+      font-size: 18px; font-weight: 800; letter-spacing: 5px;
+      color: rgba(255,255,255,0.8); text-transform: uppercase;
+    }
+
+    .glow { position: absolute; border-radius: 50%; pointer-events: none; z-index: 1; }
+
+    /* ═══════ TWO-COLUMN LAYOUT ═══════ */
+    .layout {
+      position: absolute; inset: 0;
+      display: flex; z-index: 5;
+    }
+
+    /* Left: images */
+    .img-zone {
+      width: 880px; height: 100%;
+      position: relative;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 80px 40px;
+      gap: 16px;
+    }
+    .img-main {
+      width: 100%; max-width: 700px;
+      border-radius: 20px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+    }
+    .img-main img {
+      width: 100%; height: 420px; object-fit: cover; display: block;
+    }
+    .img-row {
+      display: flex; gap: 16px; width: 100%; max-width: 700px;
+    }
+    .img-sub {
+      flex: 1; border-radius: 16px; overflow: hidden;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04);
+    }
+    .img-sub img {
+      width: 100%; height: 220px; object-fit: cover; display: block;
+    }
+    /* Overlay shine */
+    .img-main::after, .img-sub::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(155deg, rgba(255,255,255,0.06) 0%, transparent 30%);
+      pointer-events: none; border-radius: inherit;
+    }
+    .img-main, .img-sub { position: relative; }
+
+    /* Vertical divider */
+    .layout::after {
+      content: ""; position: absolute;
+      left: 880px; top: 70px; bottom: 70px; width: 1px;
+      background: linear-gradient(to bottom, transparent, rgba(255,190,69,0.2) 20%, rgba(255,190,69,0.1) 50%, rgba(255,190,69,0.2) 80%, transparent);
+    }
+
+    /* Right: menu content */
+    .menu-zone {
+      flex: 1; height: 100%;
+      display: flex; flex-direction: column;
+      justify-content: center;
+      padding: 60px 70px 60px 60px;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      width: fit-content; padding: 8px 18px; border-radius: 999px;
+      border: 1px solid rgba(255,187,0,0.2); background: rgba(255,170,0,0.05);
+      color: #f0b84d; font-size: 13px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px;
+    }
+    .badge::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: #ffbe45; box-shadow: 0 0 8px rgba(255,190,69,0.5);
+    }
+
+    .stitle {
+      font-family: 'Playfair Display', serif;
+      font-size: 68px; line-height: 0.95; font-weight: 900;
+      margin: 0 0 12px; text-transform: uppercase;
+    }
+    .stitle .accent {
+      color: #ffbe45;
+      text-shadow: 0 0 30px rgba(255,190,69,0.15);
+    }
+
+    .ssub {
+      font-size: 16px; line-height: 1.5; color: rgba(255,255,255,0.45);
+      font-weight: 300; max-width: 450px; margin-bottom: 24px;
+    }
+
+    .menu-list {
+      display: flex; flex-direction: column; gap: 6px;
+      width: 100%; max-width: 520px;
+    }
+    .item {
+      display: flex; align-items: center;
+      padding: 10px 18px; border-radius: 12px;
+      background: linear-gradient(100deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .item-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .item-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,190,69,0.5); flex-shrink: 0; }
+    .item-info { min-width: 0; }
+    .item-name { font-size: 19px; font-weight: 600; color: rgba(255,255,255,0.9); }
+    .item-desc { font-size: 20px; color: rgba(255,255,255,0.3); font-weight: 300; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+    .item-spacer { flex: 1; margin: 0 10px; border-bottom: 1px dotted rgba(255,255,255,0.06); min-width: 12px; }
+    .item-price { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: #ffbe45; white-space: nowrap; }
+
+    /* ═══════ SCREEN DOTS ═══════ */
+    .screen-dots {
+      position: absolute; bottom: 30px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 10px; z-index: 50;
+    }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer; transition: all 0.4s ease;
+    }
+    .dot.active {
+      background: #ffbe45; border-color: #ffbe45;
+      box-shadow: 0 0 10px rgba(255,190,69,0.5);
+      transform: scale(1.3);
+    }
+
+    /* ═══════ GLOW POSITIONS ═══════ */
+    .g1 { width: 500px; height: 500px; left: 2%; top: -5%; background: radial-gradient(circle, rgba(255,140,0,0.12) 0%, transparent 70%); animation: pulseGlow 6s ease-in-out infinite; }
+    .g2 { width: 350px; height: 350px; right: 5%; bottom: 5%; background: radial-gradient(circle, rgba(255,160,0,0.08) 0%, transparent 70%); animation: pulseGlow 7s ease-in-out infinite 2s; }
+
+    /* ═══════ SINGLE IMAGE LAYOUT ═══════ */
+    .img-zone.single {
+      justify-content: center;
+    }
+    .img-zone.single .img-main {
+      max-width: 750px;
+    }
+    .img-zone.single .img-main img {
+      height: 600px;
+    }
+
+    /* ═══════ SCREEN 5 — ANIMATED PROMO ═══════ */
+    @keyframes promoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes promoPulse {
+      0%, 100% { text-shadow: 0 0 20px rgba(255,100,0,0.3), 0 0 60px rgba(255,60,0,0.15); }
+      50% { text-shadow: 0 0 40px rgba(255,100,0,0.6), 0 0 100px rgba(255,60,0,0.3); }
+    }
+    @keyframes neonFlicker {
+      0%,19%,21%,23%,25%,54%,56%,100% { opacity: 1; }
+      20%,24%,55% { opacity: 0.6; }
+    }
+    @keyframes sparkle {
+      0%,100% { opacity: 0; transform: scale(0) rotate(0deg); }
+      50% { opacity: 1; transform: scale(1) rotate(180deg); }
+    }
+    @keyframes promoEnter {
+      from { opacity: 0; transform: scale(0.8) translateY(40px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes priceEnter {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes lineGrow {
+      from { width: 0; } to { width: 100%; }
+    }
+    @keyframes subtitleEnter {
+      from { opacity: 0; letter-spacing: 15px; }
+      to { opacity: 1; letter-spacing: 4px; }
+    }
+
+    #s5 { display: flex; align-items: center; justify-content: center; }
+
+    .promo-container {
+      position: relative; z-index: 5;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      width: 100%; height: 100%;
+    }
+
+    .screen.active .promo-main { animation: promoEnter 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s both; }
+    .screen.active .promo-price-wrap { animation: priceEnter 0.6s cubic-bezier(0.16,1,0.3,1) 0.6s both; }
+    .screen.active .promo-line { animation: lineGrow 0.8s ease 0.4s both; }
+    .screen.active .promo-sub { animation: subtitleEnter 0.8s ease 0.8s both; }
+    .screen.active .promo-detail { animation: fadeSlideUp 0.6s ease 1s both; }
+
+    .promo-main {
+      font-family: 'Playfair Display', serif;
+      font-size: 100px; font-weight: 900; text-transform: uppercase;
+      text-align: center; line-height: 1; color: white;
+      animation: promoPulse 3s ease-in-out infinite;
+    }
+    .promo-main .highlight {
+      color: #ffbe45; font-size: 130px; display: block;
+      animation: promoFloat 4s ease-in-out infinite;
+    }
+    .promo-line {
+      height: 2px; max-width: 500px;
+      background: linear-gradient(90deg, transparent, #ffbe45, transparent);
+      margin: 24px auto;
+    }
+    .promo-price-wrap {
+      display: flex; align-items: baseline; gap: 16px; margin: 16px 0;
+    }
+    .promo-la { font-size: 44px; color: rgba(255,255,255,0.7); font-weight: 300; }
+    .promo-price {
+      font-family: 'Playfair Display', serif;
+      font-size: 160px; font-weight: 900; color: #ffbe45; line-height: 1;
+      animation: neonFlicker 4s ease-in-out infinite, promoFloat 3s ease-in-out infinite 0.5s;
+      text-shadow: 0 0 30px rgba(255,160,0,0.4), 0 0 80px rgba(255,100,0,0.2);
+    }
+    .promo-euro {
+      font-size: 70px; color: #ffbe45; font-weight: 700;
+      font-family: 'Playfair Display', serif;
+    }
+    .promo-sub {
+      font-size: 24px; color: rgba(255,255,255,0.5);
+      text-transform: uppercase; letter-spacing: 4px; font-weight: 300; margin-top: 8px;
+    }
+    .promo-detail {
+      font-size: 16px; color: rgba(255,255,255,0.25);
+      margin-top: 24px; letter-spacing: 2px; text-transform: uppercase;
+    }
+
+    .sparkle {
+      position: absolute; width: 5px; height: 5px;
+      background: #ffbe45; border-radius: 50%;
+      pointer-events: none; z-index: 4;
+    }
+    .sparkle:nth-child(1) { left: 15%; top: 20%; animation: sparkle 3s ease infinite 0s; }
+    .sparkle:nth-child(2) { right: 20%; top: 15%; animation: sparkle 4s ease infinite 0.5s; }
+    .sparkle:nth-child(3) { left: 25%; bottom: 25%; animation: sparkle 3.5s ease infinite 1s; }
+    .sparkle:nth-child(4) { right: 15%; bottom: 20%; animation: sparkle 2.5s ease infinite 1.5s; }
+    .sparkle:nth-child(5) { left: 40%; top: 10%; animation: sparkle 4s ease infinite 2s; width: 4px; height: 4px; }
+    .sparkle:nth-child(6) { right: 35%; bottom: 12%; animation: sparkle 3s ease infinite 0.8s; width: 4px; height: 4px; }
+  </style>
+</head>
+<body>
+  <div class="slideshow">
+
+    <!-- ════════ SCREEN 1 — BURGERS ════════ -->
+    <div class="screen active" id="s1">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-zone">
+          <div class="img-main"><img src="photo_5.png" alt="Burger hero" /></div>
+          <div class="img-row">
+            <div class="img-sub"><img src="photo_1.png" alt="Cheese" /></div>
+            <div class="img-sub"><img src="photo_2.png" alt="Dbl Cheese" /></div>
+            <div class="img-sub"><img src="photo_4.png" alt="Chicken" /></div>
+          </div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Burgers</div>
+          <h1 class="stitle">Nos <span class="accent">Burgers</span></h1>
+          <div class="ssub">Steaks frais, pain brioché, garnitures généreuses.</div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Cheese</div><div class="item-desc">1 steak 90g, crudités, fromage</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">6.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Dbl Cheese</div><div class="item-desc">2 steaks 90g, crudités, fromage</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">8 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Cordon Bleu</div><div class="item-desc">1 cordon bleu, crudités, fromage</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">8.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Chicken</div><div class="item-desc">Poulet pané, crudités, fromage, sauce blanche</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">8 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Chicken Rösti</div><div class="item-desc">Poulet pané, galette P.de terre, crudités, fromage</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">8.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Bacon Cheese</div><div class="item-desc">2 steaks 90g, bacon, crudités, fromage</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">8.50 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Royal</div><div class="item-desc">2 steaks 90g, galette P.de terre, crudités, fromage</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">9.60 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 2 — SANDWICHES ════════ -->
+    <div class="screen" id="s2">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-zone">
+          <div class="img-main"><img src="photo_7.png" alt="Sandwich kebab" /></div>
+          <div class="img-row">
+            <div class="img-sub"><img src="photo_8.png" alt="Sandwich tenders" /></div>
+            <div class="img-sub"><img src="photo_4.png" alt="Sandwich chicken" /></div>
+          </div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Sandwiches</div>
+          <h1 class="stitle">Nos <span class="accent">Sandwiches</span></h1>
+          <div class="ssub">Pâte fraîche maison. +0.50€ frites, +1.50€ boisson 33cl.</div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Kebab</div><div class="item-desc">Viande de Kebab</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Tenders</div><div class="item-desc">Tenders, cheddar</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Chicken</div><div class="item-desc">Poulet mariné au curry, cheddar</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Américain</div><div class="item-desc">2 steaks, oeuf, cheddar</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Boursin</div><div class="item-desc">Escalope de poulet, boursin</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Royal</div><div class="item-desc">Steak, galette P.de terre, oeuf, cheddar</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 3 — PANINIS ════════ -->
+    <div class="screen" id="s3">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-zone single">
+          <div class="img-main"><img src="photo_8.png" alt="Panini" /></div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Paninis</div>
+          <h1 class="stitle">Nos <span class="accent">Paninis</span></h1>
+          <div class="ssub">1 Panini au choix. Seul 4€ / Menu 5.60€.</div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">3 Fromages</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Jambon Fromage</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Saumon Fumé</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Viande Hachée</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Thon</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Poulet</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Merguez</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Chèvre</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">4 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 4 — GALETTES ════════ -->
+    <div class="screen" id="s4">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="layout">
+        <div class="img-zone single">
+          <div class="img-main"><img src="photo_7.png" alt="Galette" /></div>
+        </div>
+        <div class="menu-zone">
+          <div class="badge">Galettes</div>
+          <h1 class="stitle">Nos <span class="accent">Galettes</span></h1>
+          <div class="ssub">Servies avec crudités. +0.50€ frites.</div>
+          <div class="menu-list">
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Chicken Curry</div><div class="item-desc">Poulet mariné au curry et crudités</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Kebab</div><div class="item-desc">Viande Kebab, crudités</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Cordon-Bleu</div><div class="item-desc">Cordon Bleu, crudités</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Merguez</div><div class="item-desc">2 Merguez, crudités</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Tenders</div><div class="item-desc">Tenders, crudités</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+            <div class="item">
+              <div class="item-left"><div class="item-dot"></div><div class="item-info"><div class="item-name">Nuggets</div><div class="item-desc">Nuggets, crudités</div></div></div>
+              <div class="item-spacer"></div><div class="item-price">7 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ SCREEN 5 — ANIMATED PROMO ════════ -->
+    <div class="screen" id="s5">
+      <div class="glow g1"></div><div class="glow g2"></div>
+      <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+      <div class="brand"><div class="brand-icon">P</div><div class="brand-text">Presto</div></div>
+
+      <div class="sparkle"></div><div class="sparkle"></div><div class="sparkle"></div>
+      <div class="sparkle"></div><div class="sparkle"></div><div class="sparkle"></div>
+
+      <div class="promo-container">
+        <div class="promo-main">2 Pizzas <span class="highlight">Achetées</span></div>
+        <div class="promo-line"></div>
+        <div class="promo-price-wrap">
+          <span class="promo-la">la 3ème à</span>
+          <span class="promo-price">2</span>
+          <span class="promo-euro">€</span>
+        </div>
+        <div class="promo-sub">A emporter &amp; Livraison</div>
+        <div class="promo-detail">Valable tous les jours</div>
+      </div>
+    </div>
+
+    <!-- Navigation dots -->
+    <div class="screen-dots">
+      <div class="dot active" data-screen="0"></div>
+      <div class="dot" data-screen="1"></div>
+      <div class="dot" data-screen="2"></div>
+      <div class="dot" data-screen="3"></div>
+      <div class="dot" data-screen="4"></div>
+    </div>
+  </div>
+
+  <script>
+    const screens = document.querySelectorAll('.screen');
+    const dots = document.querySelectorAll('.dot');
+    let current = 0;
+    const INTERVAL = 16000;
+
+    function goTo(idx) {
+      const prev = current;
+      const next = idx % screens.length;
+      if (prev === next) return;
+      screens[prev].classList.remove('active');
+      screens[prev].classList.add('leaving');
+      dots[prev].classList.remove('active');
+      screens[next].classList.add('active');
+      dots[next].classList.add('active');
+      setTimeout(() => { screens[prev].classList.remove('leaving'); }, 950);
+      current = next;
+    }
+
+    dots.forEach(d => d.addEventListener('click', () => {
+      clearInterval(timer);
+      goTo(+d.dataset.screen);
+      timer = setInterval(() => goTo(current + 1), INTERVAL);
+    }));
+
+    let timer = setInterval(() => goTo(current + 1), INTERVAL);
+  </script>
+</body>
+</html>
